@@ -1,8 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from enum import Enum
 
+from deepeval.models import DeepEvalBaseLLM
+
 from deepteam.vulnerabilities import BaseVulnerability
-from deepteam.metrics import BaseRedTeamingMetric
+from deepteam.metrics import BaseRedTeamingMetric, HarmMetric
 
 
 class CustomVulnerability(BaseVulnerability):
@@ -17,6 +19,9 @@ class CustomVulnerability(BaseVulnerability):
         types: Optional[List[str]] = None,
         custom_prompt: Optional[str] = None,
         metric: Optional[BaseRedTeamingMetric] = None,
+        model: Optional[Union[str, DeepEvalBaseLLM]] = None,
+        async_mode: bool = True,
+        verbose_mode: bool = False,
     ):
         self.name = name
 
@@ -26,8 +31,19 @@ class CustomVulnerability(BaseVulnerability):
             )
 
         self.custom_prompt = custom_prompt
-        self.metric = metric
         self.criteria = criteria.strip()
+        self.model = model
+        self.async_mode = async_mode
+        self.verbose_mode = verbose_mode
+        if metric:
+            self.metric = metric
+        else:
+            self.metric = HarmMetric(
+                harm_category=self.criteria,
+                model=self.model,
+                async_mode=self.async_mode,
+                verbose_mode=self.verbose_mode
+            )
         super().__init__(self.types)
 
     def get_name(self) -> str:
@@ -36,7 +52,7 @@ class CustomVulnerability(BaseVulnerability):
     def get_custom_prompt(self) -> Optional[str]:
         return self.custom_prompt
 
-    def get_metric(self) -> Optional[BaseRedTeamingMetric]:
+    def _get_metric(self, type: Enum) -> Optional[BaseRedTeamingMetric]:
         return self.metric
 
     def get_criteria(self) -> str:
